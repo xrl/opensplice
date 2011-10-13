@@ -13,6 +13,8 @@
 #ifndef SAC_FOODATAREADER_H
 #define SAC_FOODATAREADER_H
 
+#include "dds_dcps.h"
+
 DDS_ReturnCode_t
 DDS_FooDataReader_read (
     DDS_DataReader this,
