@@ -12,6 +12,7 @@
 #ifndef SACPP_MAPPING_MEMORY_H
 #define SACPP_MAPPING_MEMORY_H
 
+#include "dds_dcps_builtintopics.h"
 #include "sacpp_if.h"
 
 #define DDS_DCPS_MEM_ALIGN 8
