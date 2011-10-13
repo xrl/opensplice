@@ -50,6 +50,7 @@ AM_CFLAGS := $(GCC_FLAGS) \
 	-Isrc/kernel/code \
 	-Isrc/configuration/config/include \
 	-Isrc/configuration/parser/include \
+	-Isrc/configuration/parser/code/ \
 	-Isrc/user/include \
 	-Isrc/user/code \
 	-Isrc/api/cm/xml/include \
@@ -140,10 +141,14 @@ $(odlpp_dir)/c_odlbase.c : $(odlpp_dir)/c_odlbase.y $(odlpp_dir)/c_odlbase.h
 ##### Kernel
 ##############################################################################
 
+## TODO: put kernelModule.h in to the src/kernel/code dir AND make sure it's part of CLEANFILES
+## Also: double free throw warnings at run time
+## BTW: What in the world does odlpp do? No comments to say "WHAT". Uh huh.
+
 kernel_dir=src/kernel/code
 include_dir=src/include/
 nodist_libddskernel_la_SOURCES = kernelModule.h
-$(kernel_dir)/v_avgValue.c : $(kernel_dir)/kernelModule.h
+$(kernel_dir)/v_avgValue.c : kernelModule.h
 libddskernel_la_DEPENDENCIES = odlpp
 libddskernel_la_SOURCES = $(kernel_dir)/v_avgValue.c $(kernel_dir)/v_deliveryServiceEntry.c $(kernel_dir)/v_maxValue.c $(kernel_dir)/v_query.c \
 	$(kernel_dir)/v_builtin.c $(kernel_dir)/v_deliveryWaitList.c $(kernel_dir)/v_message.c $(kernel_dir)/v_queryStatistics.c \
@@ -173,7 +178,7 @@ libddskernel_la_SOURCES = $(kernel_dir)/v_avgValue.c $(kernel_dir)/v_deliverySer
 	$(kernel_dir)/v_writerStatistics.c
 
 # TODO: Probably rewrite the bin/sppodl
-$(kernel_dir)/kernelModule.h : odlpp $(kernel_dir)/v_kernel.odl
+kernelModule.h : odlpp $(kernel_dir)/v_kernel.odl
 	./.libs/odlpp $(kernel_dir)/v_kernel.odl
 
 ##############################################################################
@@ -193,7 +198,7 @@ libddsconfparser_la_SOURCES = $(parser_dir)/mcl.c $(parser_dir)/xml_tmplExp.c $(
 	$(parser_dir)/cfg_parser.c
 
 $(parser_dir)/../include/cfg_scanner.h : $(parser_dir)/cfg_scanner.l
-	$(LEX) $(LFLAGS) $(AM_LFLAGS) -Pcfg_scanner_yy -o$(db_dir)/../include/cfg_scanner.h $<
+	$(LEX) $(LFLAGS) $(AM_LFLAGS) -Pcfg_scanner_yy -o$(parser_dir)/../include/cfg_scanner.h $<
 $(parser_dir)/cfg_parser.c : $(parser_dir)/cfg_parser.y $(parser_dir)/../include/cfg_scanner.h
 	$(YACC) $(YFLAGS) $< -o $@
 
@@ -235,15 +240,34 @@ libdcpsgapi_la_SOURCES=$(dcpsgapi_dir)/gapi_builtin.c $(dcpsgapi_dir)/gapi_commo
 ##### CM (DCPS/SAC)
 ##############################################################################
 
+CLEANFILES=built
+
+built_idl_dir=built/idl
+builtinidl=$(built_idl_dir)/dds_dcps.h $(built_idl_dir)/dds_dcps_builtintopics.h $(built_idl_dir)/dds_builtinTopics.h
 dcpssac_dir=src/api/dcps/sac/code
+libdcpssac_la_CPPFLAGS=-I$(dcpssac_dir)/../include -I$(dcpsgapi_dir)
+libdcpssac_la_DEPENDENCIES=idlpp $(builtinidl)
 libdcpssac_la_SOURCES=$(dcpssac_dir)/sac_builtinTopics.c $(dcpssac_dir)/sac_common.c $(dcpssac_dir)/sac_condition.c $(dcpssac_dir)/sac_contentFilteredTopic.c $(dcpssac_dir)/sac_dataReader.c $(dcpssac_dir)/sac_dataReaderView.c $(dcpssac_dir)/sac_dataWriter.c $(dcpssac_dir)/sac_dcpsSplDcps.c $(dcpssac_dir)/sac_domain.c $(dcpssac_dir)/sac_domainParticipant.c $(dcpssac_dir)/sac_domainParticipantFactory.c $(dcpssac_dir)/sac_entity.c $(dcpssac_dir)/sac_errorInfo.c $(dcpssac_dir)/sac_fooDataReader.c $(dcpssac_dir)/sac_fooDataReaderView.c $(dcpssac_dir)/sac_fooDataWriter.c $(dcpssac_dir)/sac_fooTypeSupport.c $(dcpssac_dir)/sac_guardCondition.c $(dcpssac_dir)/sac_multiTopic.c $(dcpssac_dir)/sac_objManag.c $(dcpssac_dir)/sac_publisher.c $(dcpssac_dir)/sac_queryCondition.c $(dcpssac_dir)/sac_readCondition.c $(dcpssac_dir)/sac_statusCondition.c $(dcpssac_dir)/sac_structured.c $(dcpssac_dir)/sac_subscriber.c $(dcpssac_dir)/sac_topic.c $(dcpssac_dir)/sac_topicDescription.c $(dcpssac_dir)/sac_typeSupport.c $(dcpssac_dir)/sac_waitSet.c
+
+$(built_idl_dir)/dds_dcps_builtintopics.h : etc/idl/dds_dcps_builtintopics.idl
+	mkdir -p built/idl
+	OSPL_TMPL_PATH=etc/idlpp ./idlpp -l c -S -b sac -d built/idl/ $<
+
+$(built_idl_dir)/dds_dcps.h : etc/idl/dds_dcps_builtintopics.idl
+	mkdir -p built/idl
+	OSPL_TMPL_PATH=etc/idlpp ./idlpp -l c -S -b sac -d built/idl/ $<
+
+$(built_idl_dir)/dds_builtinTopics.h : etc/idl/dds_builtinTopics.idl
+	mkdir -p built/idl
+	OSPL_TMPL_PATH=etc/idlpp ./idlpp -l c -S -b sac -d built/idl/ $<
+	
 
 ##############################################################################
 ##### CM (DCPS/SAJ)
 ##############################################################################
 
-saj_c_dir=src/api/dcps/saj/c/code
-libdcpssajc_la_SOURCES=$(saj_c_dir)/saj_condition.c $(saj_c_dir)/saj_contentFilteredTopic.c $(saj_c_dir)/saj_copyCache.c $(saj_c_dir)/saj_copyIn.c $(saj_c_dir)/saj_copyOut.c $(saj_c_dir)/saj_dataReader.c $(saj_c_dir)/saj_dataReaderListener.c $(saj_c_dir)/saj_dataReaderView.c $(saj_c_dir)/saj_dataWriter.c $(saj_c_dir)/saj_dataWriterListener.c $(saj_c_dir)/saj_domain.c $(saj_c_dir)/saj_domainParticipant.c $(saj_c_dir)/saj_domainParticipantFactory.c $(saj_c_dir)/saj_domainParticipantListener.c $(saj_c_dir)/saj_entity.c $(saj_c_dir)/saj_errorInfo.c $(saj_c_dir)/saj_exception.c $(saj_c_dir)/saj_extDomainParticipantListener.c $(saj_c_dir)/saj_extTopicListener.c $(saj_c_dir)/saj_fooDataReader.c $(saj_c_dir)/saj_fooDataReaderView.c $(saj_c_dir)/saj_fooDataWriter.c $(saj_c_dir)/saj_fooTypeSupport.c $(saj_c_dir)/saj_guardCondition.c $(saj_c_dir)/saj_initialisation.c $(saj_c_dir)/saj_listener.c $(saj_c_dir)/saj_multiTopic.c $(saj_c_dir)/saj_publisher.c $(saj_c_dir)/saj_publisherListener.c $(saj_c_dir)/saj_qosUtils.c $(saj_c_dir)/saj_queryCondition.c $(saj_c_dir)/saj_readCondition.c $(saj_c_dir)/saj_status.c $(saj_c_dir)/saj_statusCondition.c $(saj_c_dir)/saj_subscriber.c $(saj_c_dir)/saj_subscriberListener.c $(saj_c_dir)/saj_topic.c $(saj_c_dir)/saj_topicDescription.c $(saj_c_dir)/saj_topicListener.c $(saj_c_dir)/saj_typeSupport.c $(saj_c_dir)/saj_utilities.c $(saj_c_dir)/saj_waitSet.c
+#saj_c_dir=src/api/dcps/saj/c/code
+#libdcpssajc_la_SOURCES=$(saj_c_dir)/saj_condition.c $(saj_c_dir)/saj_contentFilteredTopic.c $(saj_c_dir)/saj_copyCache.c $(saj_c_dir)/saj_copyIn.c $(saj_c_dir)/saj_copyOut.c $(saj_c_dir)/saj_dataReader.c $(saj_c_dir)/saj_dataReaderListener.c $(saj_c_dir)/saj_dataReaderView.c $(saj_c_dir)/saj_dataWriter.c $(saj_c_dir)/saj_dataWriterListener.c $(saj_c_dir)/saj_domain.c $(saj_c_dir)/saj_domainParticipant.c $(saj_c_dir)/saj_domainParticipantFactory.c $(saj_c_dir)/saj_domainParticipantListener.c $(saj_c_dir)/saj_entity.c $(saj_c_dir)/saj_errorInfo.c $(saj_c_dir)/saj_exception.c $(saj_c_dir)/saj_extDomainParticipantListener.c $(saj_c_dir)/saj_extTopicListener.c $(saj_c_dir)/saj_fooDataReader.c $(saj_c_dir)/saj_fooDataReaderView.c $(saj_c_dir)/saj_fooDataWriter.c $(saj_c_dir)/saj_fooTypeSupport.c $(saj_c_dir)/saj_guardCondition.c $(saj_c_dir)/saj_initialisation.c $(saj_c_dir)/saj_listener.c $(saj_c_dir)/saj_multiTopic.c $(saj_c_dir)/saj_publisher.c $(saj_c_dir)/saj_publisherListener.c $(saj_c_dir)/saj_qosUtils.c $(saj_c_dir)/saj_queryCondition.c $(saj_c_dir)/saj_readCondition.c $(saj_c_dir)/saj_status.c $(saj_c_dir)/saj_statusCondition.c $(saj_c_dir)/saj_subscriber.c $(saj_c_dir)/saj_subscriberListener.c $(saj_c_dir)/saj_topic.c $(saj_c_dir)/saj_topicDescription.c $(saj_c_dir)/saj_topicListener.c $(saj_c_dir)/saj_typeSupport.c $(saj_c_dir)/saj_utilities.c $(saj_c_dir)/saj_waitSet.c
 
 ##############################################################################
 ##### CM (DCPS/SACPP)
@@ -258,7 +282,7 @@ libdcpssacpp_la_CPPFLAGS=-I$(dcpssacpp_dir)/../include -I$(dcpssacpp_dir)/../orb
 
 # BUILT IN TYPES
 
-libddsbuiltintypes_la_SOURCES = ContentFilteredTopic_impl
+# libddsbuiltintypes_la_SOURCES = ContentFilteredTopic_impl
 
 ##############################################################################
 ##### Tools
