@@ -15,6 +15,7 @@
 #include "os_defs.h"
 #include "os_stdlib.h"
 #include "sacpp_if.h"
+#include "mapping/String.h"
 
 #if !defined NULL
 #define NULL ((void *)0)
