@@ -253,7 +253,7 @@ $(built_idl_dir)/dds_dcps_builtintopics.h : etc/idl/dds_dcps_builtintopics.idl
 	mkdir -p built/idl
 	OSPL_TMPL_PATH=etc/idlpp ./idlpp -l c -S -b sac -d built/idl/ $<
 
-$(built_idl_dir)/dds_dcps.h : etc/idl/dds_dcps_builtintopics.idl
+$(built_idl_dir)/dds_dcps.h : etc/idl/dds_dcps.idl
 	mkdir -p built/idl
 	OSPL_TMPL_PATH=etc/idlpp ./idlpp -l c -S -b sac -d built/idl/ $<
 
