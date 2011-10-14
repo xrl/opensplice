@@ -157,3 +157,4 @@ ospl_winln.obj
 release_info/RELEASE
 install/*.HDE*.opensplice.xml
 install/*.RTS*.opensplice.xml
+*.lo
